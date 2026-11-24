@@ -1,24 +1,48 @@
 <!DOCTYPE html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ChessPlan — лучший ход по рейтингу</title>
+<meta name="theme-color" content="#262421">
+<title>ChessPlan — анализ партии и лучший ход</title>
 <link rel="stylesheet" href="style.css"></head>
-<body><main>
-<h1>♞ ChessPlan</h1>
-<p class="sub">Играй партию где угодно: повторяй ходы на этой доске (свои и соперника) — сайт покажет зелёной стрелкой твой следующий лучший ход. Выбери рейтинг соперника: чем выше раздел, тем глубже теория и точнее ходы.</p>
-<div class="chips" id="lv"></div>
-<div class="card" id="lvinfo"></div>
-<div class="bw"><div id="board" class="board"></div><svg id="arrow" viewBox="0 0 80 80"></svg></div>
-<div class="info"><b id="st"></b><div id="op"></div><div id="hint"></div><div id="gr"></div></div>
-<div class="ctl">
-<button id="nw">Новая игра</button><button id="un">Отменить ход</button><button id="pl" hidden>✔ Сыграть лучший ход</button><button id="sw">Сменить сторону</button><button id="fl">Перевернуть</button>
-<select id="side"><option value="w">Я белыми</option><option value="b">Я чёрными</option></select>
-<label><input type="checkbox" id="hn" checked> Подсказка</label>
-
-</div>
-<div class="ctl"><input id="fen" placeholder="Вставь FEN позиции"><button id="lf">Загрузить</button></div>
-<div id="mv" class="mv"></div>
-<footer>Ход соперника вводишь сам: нажми фигуру, затем клетку. Движок упрощённый (не Stockfish), на низких уровнях подсказки специально неидеальны.</footer>
+<body>
+<header class="top"><b>♞ ChessPlan</b><div class="chips" id="lv"></div></header>
+<main class="wrap">
+ <section class="left">
+  <div class="boardrow">
+   <div id="evbar"><div id="evfill"></div></div>
+   <div class="bw"><div id="board" class="board"></div><svg id="arrow" viewBox="0 0 80 80"></svg></div>
+  </div>
+  <div class="ctl"><button id="pl" class="go" hidden>✔ Сыграть лучший ход</button></div>
+  <div class="ctl"><button id="un">↶ Отменить</button><button id="nw">⟲ Сбросить</button><button id="oc">Только короли</button><button id="fl">⇅ Перевернуть</button></div>
+  <div class="ctl seg"><button id="sideW">Я белыми</button><button id="sideB">Я чёрными</button><label class="hn"><input type="checkbox" id="hn" checked> Подсказки</label></div>
+  <div id="promo" hidden></div>
+  <div id="mv" class="mv"></div>
+ </section>
+ <aside class="right">
+  <div class="card">
+   <div class="hd"><b id="st"></b><span class="chip" id="depth"></span><span class="chip ev" id="evt"></span></div>
+   <div id="lines"></div>
+  </div>
+  <div class="card">
+   <div id="gr" class="gr"></div>
+   <div id="hint"></div>
+   <div id="alt" class="muted"></div>
+   <div id="op" class="op"></div>
+   <div id="tr" class="tr"></div>
+   <div id="lvinfo" class="muted"></div>
+  </div>
+  <div class="card">
+   <div class="btns"><button id="rev">📊 Анализ всей партии</button></div>
+   <div id="sum" class="muted"></div>
+  </div>
+  <div class="card">
+   <textarea id="inp" placeholder="Вставь FEN позиции или PGN партии"></textarea>
+   <div class="btns"><button id="lf">Загрузить</button><button id="cf">Копировать FEN</button><button id="cp">Копировать PGN</button></div>
+  </div>
+  <div class="card" id="recap"></div>
+  <div class="card" id="legend"></div>
+ </aside>
 </main>
+<footer class="foot">Движок упрощённый (не Stockfish). Классификация ходов — эвристика по оценке движка, не точная копия chess.com. Подсказки на низких рейтингах специально проще.</footer>
 <script src="engine.js"></script><script src="openings.js"></script><script src="app.js"></script>
 </body></html>

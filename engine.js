@@ -6,15 +6,16 @@ K=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const isW=c=>c===c.toUpperCase(),sq=i=>'abcdefgh'[i&7]+(8-(i>>3)),uci=m=>sq(m.f)+sq(m.t)+(m.p||'');
 // Уровни: d=глубина, ms=время, q=форсированный поиск взятий, noise=случайный шум (оценки), r=шанс случайного хода, bk=сколько полуходов дебютной теории, tier=сложность дебютов
 const LV=[
-{n:'100–300',d:1,ms:150,q:0,noise:450,r:.35,bk:4,tier:0,desc:'Бот часто зевает фигуры и ходит почти наугад. Учись: развитие фигур, рокировка, не оставлять фигуры без защиты.'},
-{n:'400–600',d:1,ms:150,q:0,noise:260,r:.15,bk:6,tier:0,desc:'Берёт то, что висит, но не видит угроз на 2 хода. Ловись на простые вилки и связки.'},
-{n:'700–900',d:2,ms:300,q:0,noise:150,r:.06,bk:8,tier:1,desc:'Видит простую тактику на 1–2 хода. Выбирай понятные дебюты и играй на ошибки.'},
-{n:'1000–1200',d:2,ms:400,q:0,noise:80,r:.02,bk:10,tier:1,desc:'Знает базовую теорию, редко зевает. Работай над пешечной структурой и планом.'},
-{n:'1300–1500',d:3,ms:600,q:0,noise:40,r:0,bk:14,tier:2,desc:'Играет осмысленно, тактика на 3 хода. Нужна точная теория и эндшпиль.'},
-{n:'1600–1800',d:3,ms:900,q:1,noise:15,r:0,bk:20,tier:2,desc:'Хорошо считает размены. Знает основные дебюты глубоко. Ошибки дорого стоят.'},
-{n:'1900+',d:4,ms:1500,q:1,noise:0,r:0,bk:40,tier:3,desc:'Максимум этого движка: глубокая теория и чистая тактика. Для настоящей силы подключи Stockfish (см. README).'}];
+{n:'100–300',d:1,ms:150,q:0,tol:150,pb:.40,bk:4,tier:0,acc:'45–60',desc:'Часто зевает фигуры и ходит почти наугад. Ловится на любую простую угрозу. Учись: развитие фигур, рокировка, защита фигур.'},
+{n:'400–600',d:1,ms:150,q:0,tol:110,pb:.33,bk:6,tier:0,acc:'55–70',desc:'Берёт то, что висит, но не видит угроз на 2 хода. Ловится на вилки и связки.'},
+{n:'700–900',d:2,ms:300,q:0,tol:80,pb:.25,bk:8,tier:1,acc:'62–74',desc:'Видит простую тактику на 1–2 хода. Играй понятные дебюты и жди зевка после дебюта.'},
+{n:'1000–1200',d:2,ms:400,q:0,tol:55,pb:.20,bk:10,tier:1,acc:'65–78',desc:'Знает базовую теорию, зевает реже. Работай над пешечной структурой и планом.'},
+{n:'1300–1500',d:3,ms:600,q:0,tol:35,pb:.17,bk:14,tier:2,acc:'72–83',desc:'Играет осмысленно, считает тактику на 3 хода. Нужны точная теория и эндшпиль.'},
+{n:'1600–1800',d:3,ms:900,q:1,tol:20,pb:.14,bk:20,tier:2,acc:'78–88',desc:'Хорошо считает размены, знает основные дебюты глубоко. Ошибки дорого стоят.'},
+{n:'1900+',d:4,ms:1500,q:1,tol:0,pb:.11,bk:40,tier:3,acc:'83–92',desc:'Максимум этого движка: глубокая теория и чистая тактика. Для настоящей силы подключи Stockfish (см. README).'}];
 function fromFen(f){const p=f.trim().split(/\s+/),b=[];for(const ch of p[0]){if(ch==='/')continue;if(/\d/.test(ch))for(let i=0;i<+ch;i++)b.push('');else b.push(ch)}
-if(b.length!==64)throw new Error('FEN');return{b,t:p[1]||'w',c:p[2]&&p[2]!=='-'?p[2]:'',e:p[3]&&p[3]!=='-'?(8-p[3][1])*8+'abcdefgh'.indexOf(p[3][0]):-1}}
+const s={b,t:p[1]==='b'?'b':'w',c:p[2]&&p[2]!=='-'?p[2]:'',e:p[3]&&p[3]!=='-'?(8-p[3][1])*8+'abcdefgh'.indexOf(p[3][0]):-1};
+if(b.length!==64||b.filter(c=>c==='K').length!==1||b.filter(c=>c==='k').length!==1||kAtt(b,s.t!=='w'))throw new Error('FEN');return s}
 const start=()=>fromFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
 function att(b,s,w){const x=s&7,y=s>>3,at=(a,c)=>a>=0&&a<8&&c>=0&&c<8?b[c*8+a]:'',P=w?'P':'p',Nn=w?'N':'n',Kk=w?'K':'k',R=w?'R':'r',B=w?'B':'b',Q=w?'Q':'q',py=w?y+1:y-1;
 if(at(x-1,py)===P||at(x+1,py)===P)return 1;
@@ -25,7 +26,7 @@ const kAtt=(b,w)=>{const k=b.indexOf(w?'K':'k');return k<0?0:att(b,k,!w)};
 function gen(s,caps){const b=s.b,w=s.t==='w',out=[];
 for(let i=0;i<64;i++){const c=b[i];if(!c||isW(c)!==w)continue;const x=i&7,y=i>>3,u=c.toLowerCase();
 const add=(t,p)=>out.push({f:i,t,p,v:(b[t]?V[b[t].toLowerCase()]*10-V[u]:0)+(p?900:0)});
-if(u==='p'){const d=w?-1:1,y1=y+d,pr=w?y1===0:y1===7,push=t=>{if(pr){add(t,'q');add(t,'n')}else add(t)};
+if(u==='p'){const d=w?-1:1,y1=y+d,pr=w?y1===0:y1===7,push=t=>{if(pr){for(const q of'qrbn')add(t,q)}else add(t)};
 if(!caps||pr)if(!b[y1*8+x]){push(y1*8+x);if(!caps&&y===(w?6:1)&&!b[(y1+d)*8+x])add((y1+d)*8+x)}
 for(const dx of[-1,1]){const nx=x+dx;if(nx<0||nx>7)continue;const t=y1*8+nx;if(b[t]&&isW(b[t])!==w)push(t);else if(t===s.e)add(t)}}
 else if(u==='n'||u==='k'){for(const[dx,dy]of u==='n'?N:K){const nx=x+dx,ny=y+dy;if(nx<0||nx>7||ny<0||ny>7)continue;const t=ny*8+nx;if((!b[t]||isW(b[t])!==w)&&(!caps||b[t]))add(t)}
@@ -57,7 +58,20 @@ function analyze(s,lv){let root=legal(s);if(!root.length)return[];DL=Date.now()+
 for(let d=1;d<=lv.d;d++){try{const cur=[];for(const o of done)cur.push({m:o.m,s:-S(apply(s,o.m),d-1,-1e5,1e5,1)});cur.sort((a,b)=>b.s-a.s);done=cur}catch(e){break}}
 return done}
 // Выбор хода "как человек этого рейтинга": шум и случайные ошибки
-function pick(r,lv){if(!r.length)return null;if(r[0].s>20000)return r[0];if(Math.random()<lv.r)return r[Math.floor(Math.random()*r.length)];
-let bs=null,bv=-1e9;for(const o of r){const v=o.s+(Math.random()*2-1)*lv.noise;if(v>bv){bv=v;bs=o}}return bs}
-g.Eng={LV,fromFen,start,legal,apply,analyze,pick,uci,sq,inCheck};
+function pick(r,lv,x){x=x||{};if(!r.length)return null;const top=r[0].s;
+if(top>20000&&(x.hint||Math.random()>lv.pb/2))return r[0];
+const pb=lv.pb*((x.ply||0)<20?.3:1)*(top>150?1.4:1);
+if(!x.hint&&Math.random()<pb){const c=r.filter(o=>top-o.s>=100&&top-o.s<(lv.pb>.3?1000:500));if(c.length)return c[Math.floor(Math.random()*c.length)]}
+const c=r.filter(o=>top-o.s<=lv.tol);return c[Math.floor(Math.random()*Math.random()*c.length)]}
+function san(s,m,L){const c=s.b[m.f],u=c.toUpperCase(),cap=s.b[m.t]||(u==='P'&&(m.t&7)!==(m.f&7));let t;
+if(u==='K'&&Math.abs(m.t-m.f)===2)t=m.t>m.f?'O-O':'O-O-O';
+else{t=u==='P'?(cap?'abcdefgh'[m.f&7]:''):u;
+if(u!=='P'&&u!=='K'){const o=(L||legal(s)).filter(x=>x!==m&&x.t===m.t&&s.b[x.f]===c&&x.f!==m.f);if(o.length){const sf=o.some(x=>(x.f&7)===(m.f&7)),sr=o.some(x=>(x.f>>3)===(m.f>>3));t+=!sf?'abcdefgh'[m.f&7]:!sr?8-(m.f>>3):'abcdefgh'[m.f&7]+(8-(m.f>>3))}}
+t+=(cap?'x':'')+sq(m.t)+(m.p?'='+m.p.toUpperCase():'')}
+const n=apply(s,m);if(inCheck(n))t+=legal(n).length?'+':'#';return t}
+function toFen(s,hm,fm){let r=[];for(let y=0;y<8;y++){let t='',k=0;for(let x=0;x<8;x++){const c=s.b[y*8+x];if(c){if(k)t+=k;k=0;t+=c}else k++}if(k)t+=k;r.push(t)}
+return r.join('/')+' '+s.t+' '+(s.c||'-')+' '+(s.e<0?'-':sq(s.e))+' '+(hm||0)+' '+(fm||1)}
+function insuff(s){const o=s.b.filter(c=>c&&c.toLowerCase()!=='k');return !o.length||(o.length===1&&/[nb]/i.test(o[0]))}
+function sacked(s,m){const c=(s.b[m.f]||'').toLowerCase(),cap=(s.b[m.t]||'').toLowerCase(),n=apply(s,m);if(!att(n.b,m.t,s.t!=='w'))return false;return V[c]-(cap?V[cap]:0)>=200}
+g.Eng={sacked,LV,fromFen,start,legal,apply,analyze,pick,uci,sq,inCheck,san,toFen,insuff};
 })(typeof window!=='undefined'?window:globalThis);
