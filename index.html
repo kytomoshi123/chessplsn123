@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ChessPlan — лучший ход по рейтингу</title>
+<link rel="stylesheet" href="style.css"></head>
+<body><main>
+<h1>♞ ChessPlan</h1>
+<p class="sub">Играй партию где угодно: повторяй ходы на этой доске (свои и соперника) — сайт покажет зелёной стрелкой твой следующий лучший ход. Выбери рейтинг соперника: чем выше раздел, тем глубже теория и точнее ходы.</p>
+<div class="chips" id="lv"></div>
+<div class="card" id="lvinfo"></div>
+<div class="bw"><div id="board" class="board"></div><svg id="arrow" viewBox="0 0 80 80"></svg></div>
+<div class="info"><b id="st"></b><div id="op"></div><div id="hint"></div><div id="gr"></div></div>
+<div class="ctl">
+<button id="nw">Новая игра</button><button id="un">Отменить ход</button><button id="pl" hidden>✔ Сыграть лучший ход</button><button id="sw">Сменить сторону</button><button id="fl">Перевернуть</button>
+<select id="side"><option value="w">Я белыми</option><option value="b">Я чёрными</option></select>
+<label><input type="checkbox" id="hn" checked> Подсказка</label>
+
+</div>
+<div class="ctl"><input id="fen" placeholder="Вставь FEN позиции"><button id="lf">Загрузить</button></div>
+<div id="mv" class="mv"></div>
+<footer>Ход соперника вводишь сам: нажми фигуру, затем клетку. Движок упрощённый (не Stockfish), на низких уровнях подсказки специально неидеальны.</footer>
+</main>
+<script src="engine.js"></script><script src="openings.js"></script><script src="app.js"></script>
+</body></html>
