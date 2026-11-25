@@ -24,13 +24,10 @@ button:hover{filter:brightness(1.12)}
 .sq.tg::after{content:"";position:absolute;width:28%;height:28%;border-radius:50%;background:rgba(0,0,0,.22);pointer-events:none}
 .pc{font-size:10.5cqw;line-height:1;pointer-events:none;font-family:"Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",sans-serif}
 .pc.w{color:#fff;text-shadow:0 0 2px #000,0 0 2px #000}.pc.b{color:#111}
-.ic{display:inline-block;aspect-ratio:148/140;width:20px;background:url(assets/icons.png) no-repeat;background-size:600% 600%;background-position:calc(var(--c)*20%) calc(var(--r)*20%);vertical-align:middle}
-.badge{position:absolute;top:-6%;right:-6%;width:44%;z-index:3;pointer-events:none}
 .ctl{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
 .hn{color:var(--mut);font-size:14px;margin-left:6px}
 .mv{margin-top:10px;font:14px/1.9 ui-monospace,Menlo,Consolas,monospace;color:var(--mut);max-height:170px;overflow:auto;background:#1f1d1b;border-radius:6px;padding:8px}
 .mo{color:var(--hi);margin-right:6px;white-space:nowrap}.num{color:var(--mut);margin-right:2px}
-.mv .ic{width:18px;margin-left:2px}
 .card{background:var(--card);border-radius:8px;padding:12px;margin-bottom:12px}
 .hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 #st{color:var(--hi);flex:1}
@@ -52,3 +49,22 @@ textarea{width:100%;min-height:70px;resize:vertical}
 #promo button{font-size:24px;padding:4px 14px}
 
 .rc{margin:10px 0;font-size:14px;color:var(--hi)}.rc .ic{margin-right:6px}
+
+.pal{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin:6px 0}
+.pal button{font-size:24px;padding:2px 10px;background:#3d3a37}
+.pal button.on{background:var(--g)}
+.pal button[data-w]{color:#fff}
+#st.edit{color:#ffb74d}
+.mv{max-height:none!important;overflow:visible!important}
+
+.ic.badge{position:absolute;top:-4%;right:-4%;width:6cqw;height:6cqw;font-size:2.8cqw;margin:0;z-index:3;pointer-events:none}
+.warn{color:#ff8a80;font-weight:600}
+details.card summary{cursor:pointer;color:var(--hi)}
+details.card p{margin:8px 0 0;font-size:14px}
+
+.goal{color:#ffd54f;font-size:14px;margin:4px 0}
+
+.ic{display:inline-block;width:20px;height:20px;vertical-align:middle;margin:0 2px;flex:none;object-fit:contain}
+.mv .ic{width:18px;height:18px}
+
+.tp{margin:8px 0;font-size:14px;color:var(--tx)}.tp b{color:var(--hi)}

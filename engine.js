@@ -6,13 +6,13 @@ K=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const isW=c=>c===c.toUpperCase(),sq=i=>'abcdefgh'[i&7]+(8-(i>>3)),uci=m=>sq(m.f)+sq(m.t)+(m.p||'');
 // Уровни: d=глубина, ms=время, q=форсированный поиск взятий, noise=случайный шум (оценки), r=шанс случайного хода, bk=сколько полуходов дебютной теории, tier=сложность дебютов
 const LV=[
-{n:'100–300',d:1,ms:150,q:0,tol:150,pb:.40,bk:4,tier:0,acc:'45–60',desc:'Часто зевает фигуры и ходит почти наугад. Ловится на любую простую угрозу. Учись: развитие фигур, рокировка, защита фигур.'},
-{n:'400–600',d:1,ms:150,q:0,tol:110,pb:.33,bk:6,tier:0,acc:'55–70',desc:'Берёт то, что висит, но не видит угроз на 2 хода. Ловится на вилки и связки.'},
-{n:'700–900',d:2,ms:300,q:0,tol:80,pb:.25,bk:8,tier:1,acc:'62–74',desc:'Видит простую тактику на 1–2 хода. Играй понятные дебюты и жди зевка после дебюта.'},
-{n:'1000–1200',d:2,ms:400,q:0,tol:55,pb:.20,bk:10,tier:1,acc:'65–78',desc:'Знает базовую теорию, зевает реже. Работай над пешечной структурой и планом.'},
-{n:'1300–1500',d:3,ms:600,q:0,tol:35,pb:.17,bk:14,tier:2,acc:'72–83',desc:'Играет осмысленно, считает тактику на 3 хода. Нужны точная теория и эндшпиль.'},
-{n:'1600–1800',d:3,ms:900,q:1,tol:20,pb:.14,bk:20,tier:2,acc:'78–88',desc:'Хорошо считает размены, знает основные дебюты глубоко. Ошибки дорого стоят.'},
-{n:'1900+',d:4,ms:1500,q:1,tol:0,pb:.11,bk:40,tier:3,acc:'83–92',desc:'Максимум этого движка: глубокая теория и чистая тактика. Для настоящей силы подключи Stockfish (см. README).'}];
+{n:'100–300',d:2,ms:150,q:1,tol:150,pb:.40,bk:4,tier:0,sms:300,mpv:8,acc:'45–60',desc:'Часто зевает фигуры и ходит почти наугад. Ловится на любую простую угрозу. Учись: развитие фигур, рокировка, защита фигур.'},
+{n:'400–600',d:2,ms:150,q:1,tol:110,pb:.33,bk:6,tier:0,sms:400,mpv:8,acc:'55–70',desc:'Берёт то, что висит, но не видит угроз на 2 хода. Ловится на вилки и связки.'},
+{n:'700–900',d:2,ms:300,q:0,tol:80,pb:.25,bk:8,tier:1,sms:500,mpv:6,acc:'62–74',desc:'Видит простую тактику на 1–2 хода. Играй понятные дебюты и жди зевка после дебюта.'},
+{n:'1000–1200',d:2,ms:400,q:0,tol:55,pb:.20,bk:10,tier:1,sms:700,mpv:6,acc:'65–78',desc:'Знает базовую теорию, зевает реже. Работай над пешечной структурой и планом.'},
+{n:'1300–1500',d:3,ms:600,q:0,tol:35,pb:.17,bk:14,tier:2,sms:1000,mpv:5,acc:'72–83',desc:'Играет осмысленно, считает тактику на 3 хода. Нужны точная теория и эндшпиль.'},
+{n:'1600–1800',d:3,ms:900,q:1,tol:20,pb:.14,bk:20,tier:2,sms:1500,mpv:4,acc:'78–88',desc:'Хорошо считает размены, знает основные дебюты глубоко. Ошибки дорого стоят.'},
+{n:'1900+',d:4,ms:1500,q:1,tol:0,pb:.11,bk:40,tier:3,sms:2500,mpv:3,acc:'83–92',desc:'Максимум этого движка: глубокая теория и чистая тактика. Для настоящей силы подключи Stockfish (см. README).'}];
 function fromFen(f){const p=f.trim().split(/\s+/),b=[];for(const ch of p[0]){if(ch==='/')continue;if(/\d/.test(ch))for(let i=0;i<+ch;i++)b.push('');else b.push(ch)}
 const s={b,t:p[1]==='b'?'b':'w',c:p[2]&&p[2]!=='-'?p[2]:'',e:p[3]&&p[3]!=='-'?(8-p[3][1])*8+'abcdefgh'.indexOf(p[3][0]):-1};
 if(b.length!==64||b.filter(c=>c==='K').length!==1||b.filter(c=>c==='k').length!==1||kAtt(b,s.t!=='w'))throw new Error('FEN');return s}
@@ -50,7 +50,7 @@ let T=0,DL=0,QS=0;
 function qs(s,a,bt,d){const sg=s.t==='w'?1:-1,st=sg*ev(s.b);if(st>=bt)return st;if(st>a)a=st;if(d>3)return st;
 for(const m of gen(s,1).sort((x,y)=>y.v-x.v)){const n=apply(s,m);if(kAtt(n.b,s.t==='w'))continue;const v=-qs(n,-bt,-a,d+1);if(v>=bt)return v;if(v>a)a=v}return a}
 function S(s,d,a,bt,ply){if((++T&1023)===0&&Date.now()>DL)throw 1;
-if(d<=0)return QS?qs(s,a,bt,0):(s.t==='w'?1:-1)*ev(s.b);
+if(d<=0){if(kAtt(s.b,s.t==='w')&&!gen(s).some(m=>!kAtt(apply(s,m).b,s.t==='w')))return -30000+ply;return QS?qs(s,a,bt,0):(s.t==='w'?1:-1)*ev(s.b)}
 let n=0;for(const m of gen(s).sort((x,y)=>y.v-x.v)){const c=apply(s,m);if(kAtt(c.b,s.t==='w'))continue;n++;const v=-S(c,d-1,-bt,-a,ply+1);if(v>=bt)return v;if(v>a)a=v}
 return n?a:(kAtt(s.b,s.t==='w')?-30000+ply:0)}
 // Возвращает все ходы с оценками (сантипешки, с точки зрения ходящего), лучший первым
@@ -62,7 +62,7 @@ function pick(r,lv,x){x=x||{};if(!r.length)return null;const top=r[0].s;
 if(top>20000&&(x.hint||Math.random()>lv.pb/2))return r[0];
 const pb=lv.pb*((x.ply||0)<20?.3:1)*(top>150?1.4:1);
 if(!x.hint&&Math.random()<pb){const c=r.filter(o=>top-o.s>=100&&top-o.s<(lv.pb>.3?1000:500));if(c.length)return c[Math.floor(Math.random()*c.length)]}
-const c=r.filter(o=>top-o.s<=lv.tol);return c[Math.floor(Math.random()*Math.random()*c.length)]}
+const fl=top>=150?Math.max(100,top-lv.tol):top-lv.tol,c=r.filter(o=>o.s>=fl&&(o.s>-20000||top<=-20000));return c.length?c[Math.floor(Math.random()*Math.random()*c.length)]:r[0]}
 function san(s,m,L){const c=s.b[m.f],u=c.toUpperCase(),cap=s.b[m.t]||(u==='P'&&(m.t&7)!==(m.f&7));let t;
 if(u==='K'&&Math.abs(m.t-m.f)===2)t=m.t>m.f?'O-O':'O-O-O';
 else{t=u==='P'?(cap?'abcdefgh'[m.f&7]:''):u;
@@ -73,5 +73,5 @@ function toFen(s,hm,fm){let r=[];for(let y=0;y<8;y++){let t='',k=0;for(let x=0;x
 return r.join('/')+' '+s.t+' '+(s.c||'-')+' '+(s.e<0?'-':sq(s.e))+' '+(hm||0)+' '+(fm||1)}
 function insuff(s){const o=s.b.filter(c=>c&&c.toLowerCase()!=='k');return !o.length||(o.length===1&&/[nb]/i.test(o[0]))}
 function sacked(s,m){const c=(s.b[m.f]||'').toLowerCase(),cap=(s.b[m.t]||'').toLowerCase(),n=apply(s,m);if(!att(n.b,m.t,s.t!=='w'))return false;return V[c]-(cap?V[cap]:0)>=200}
-g.Eng={sacked,LV,fromFen,start,legal,apply,analyze,pick,uci,sq,inCheck,san,toFen,insuff};
+g.Eng={sacked,ev,LV,fromFen,start,legal,apply,analyze,pick,uci,sq,inCheck,san,toFen,insuff};
 })(typeof window!=='undefined'?window:globalThis);

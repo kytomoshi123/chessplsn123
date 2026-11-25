@@ -8,26 +8,31 @@
 <header class="top"><b>♞ ChessPlan</b><div class="chips" id="lv"></div></header>
 <main class="wrap">
  <section class="left">
+  <div id="palT" class="pal" hidden></div>
   <div class="boardrow">
    <div id="evbar"><div id="evfill"></div></div>
    <div class="bw"><div id="board" class="board"></div><svg id="arrow" viewBox="0 0 80 80"></svg></div>
   </div>
+  <div id="palB" class="pal" hidden></div>
   <div class="ctl"><button id="pl" class="go" hidden>✔ Сыграть лучший ход</button></div>
-  <div class="ctl"><button id="un">↶ Отменить</button><button id="nw">⟲ Сбросить</button><button id="oc">Только короли</button><button id="fl">⇅ Перевернуть</button></div>
+  <div class="ctl"><button id="un">↶ Отменить</button><button id="nw">⟲ Сбросить</button><button id="oc">Только короли</button><button id="ed">✎ Редактор</button><button id="fl">⇅ Перевернуть</button></div>
   <div class="ctl seg"><button id="sideW">Я белыми</button><button id="sideB">Я чёрными</button><label class="hn"><input type="checkbox" id="hn" checked> Подсказки</label></div>
   <div id="promo" hidden></div>
   <div id="mv" class="mv"></div>
  </section>
  <aside class="right">
   <div class="card">
-   <div class="hd"><b id="st"></b><span class="chip" id="depth"></span><span class="chip ev" id="evt"></span></div>
+   <div class="hd"><b id="st"></b><span class="chip" id="depth"></span><span class="chip ev" id="evt"></span><span class="chip" id="eng">встроенный движок</span></div>
    <div id="lines"></div>
   </div>
   <div class="card">
    <div id="gr" class="gr"></div>
+   <div id="goal" class="goal"></div>
    <div id="hint"></div>
    <div id="alt" class="muted"></div>
    <div id="op" class="op"></div>
+   <div id="theory" class="muted"></div>
+   <div id="coll" class="muted"></div>
    <div id="tr" class="tr"></div>
    <div id="lvinfo" class="muted"></div>
   </div>
@@ -39,10 +44,42 @@
    <textarea id="inp" placeholder="Вставь FEN позиции или PGN партии"></textarea>
    <div class="btns"><button id="lf">Загрузить</button><button id="cf">Копировать FEN</button><button id="cp">Копировать PGN</button></div>
   </div>
+  <div class="card">
+   <b>Импорт с chess.com</b>
+   <div class="ctl"><input id="cu" placeholder="Ник на chess.com" style="flex:1;min-width:120px;padding:8px 10px;border-radius:6px;border:0;background:#3d3a37;color:#fff"><button id="cl">Загрузить</button></div>
+   <div id="cg" class="muted"></div>
+  </div>
+  <div class="card" id="topic"></div>
   <div class="card" id="recap"></div>
+  <details class="card">
+   <summary><b>Stockfish</b></summary>
+   <p>Stockfish включён в сайт: файлы <b>stockfish-19-lite-single.js</b> и <b>.wasm</b> должны лежать рядом с index.html.</p>
+   <p>Загрузи все файлы на хостинг (GitHub Pages). Если вверху написано «Stockfish», он работает; если «встроенный движок» — файлы не загрузились.</p>
+  </details>
+  <details class="card">
+   <summary><b>Правила и типы шахов</b></summary>
+   <p><b>Шах</b>: король под ударом. Ответить можно ходом короля, блокировкой или взятием атакующей фигуры.</p>
+   <p><b>Двойной шах</b>: шах сразу двумя фигурами. Король обязан уйти, блокировать или взять нельзя.</p>
+   <p><b>Вскрытый шах</b>: фигура уходит с линии и открывает атаку другой фигуры на короля.</p>
+   <p><b>Шах пешкой, конём, слоном, ладьёй или ферзём</b>: по типу атакующей фигуры. Шах конём и пешкой нельзя заблокировать.</p>
+   <p><b>Мат</b>: шах, из которого нет спасения. <b>Пат</b>: хода нет, но король не под шахом. Это ничья.</p>
+   <p><b>Рокировка</b>: нельзя из-под шаха, через атакованное поле и если король проходит через бьющееся поле.</p>
+   <p><b>Взятие на проходе</b>: сразу после двойного хода пешки её можно взять пешкой с соседней вертикали.</p>
+   <p><b>Превращение</b>: пешка на последней линии становится ферзём, ладьёй, слоном или конём.</p>
+   <p><b>Ничья</b>: троекратное повторение, правило 50 ходов, недостаточно материала, пат, соглашение сторон.</p>
+  </details>
+  <details class="card">
+   <summary><b>Справочник: ловушки, гамбиты, мат-паттерны</b></summary>
+   <p><b>Ловушки:</b> Детский мат, Мат дурака, Мат Легаля, Ловушка Блэкберна (Blackburne Shilling), Атака жареной печени (Fried Liver), Слоновая ловушка (Elephant), Ловушка Ласкера, Ноева ковчега, Удочка (Fishing Pole), Мортимера, Кенингера, Энглунда, Сибирская, Фаярович, Кембридж-Спрингс, Рубинштейна, Маршалла, Тарраша, Вюрцбургера, Халосара.</p>
+   <p><b>Необычные первые ходы белых:</b> 1.g4 Гроб, 1.b4 Польский, 1.b3 Ларсен, 1.f4 Бёрд, 1.Na3 Натрий, 1.h4 Депре, 1.Nh3 Амар, 1.a3 Андерссен, 1.h3 Клеменц, 1.e3 Ван т Крейс, 1.d3 Мизес, 1.a4 Уэр, 1.c3 Сарагоса, 1.g3 фианкетто, 1.Nc3 Дунст.</p>
+   <p><b>Необычные ответы чёрных:</b> 1…f5 Голландская, 1…b6 Оуэн, 1…g5 Борг, 1…Nc6 Нимцович, 1…a6 св. Георгия, 1…b5 Польская, 1…f6 Барнс, 1…h5 Голдсмит, 1…Nh6 Адамс, 1…Na6 Натрий.</p>
+   <p><b>Гамбиты:</b> Королевский, Ферзевый, Датский, Эванса, Хэллоуин, Блэкмара-Димера, Энглунда, Стаффорда, Венгерский (Будапешт), Бенко, Смита-Морра, Фланговый, Латвийский, Слоновий, Альбина, Шлемана, Геринга, Музио, Фрома, Блюменфельда, Райдера, Урусова, Джерома, Нахмансона, Теннисона, Чёрный лев, Колорадо, Кокрейна.</p>
+   <p><b>Мат-паттерны и приёмы:</b> удушающий мат, Анастасии, арабский, Бодена, ласточкин хвост, эполетный, крючковой, опера, Пилсбери, мельница, греческий дар, промежуточный ход, освобождающая жертва, отвлечение, заманивание, перекрытие, вскрытое нападение, двойной шах, слабое превращение.</p>
+   <p><b>Системы:</b> Орангутан, Бегемот, Староиндийская атака, Каменная стена, Лондон, Колле, Торре, Тромповский, Чешская, Крысиная, Ёж.</p>
+  </details>
   <div class="card" id="legend"></div>
  </aside>
 </main>
 <footer class="foot">Движок упрощённый (не Stockfish). Классификация ходов — эвристика по оценке движка, не точная копия chess.com. Подсказки на низких рейтингах специально проще.</footer>
-<script src="engine.js"></script><script src="openings.js"></script><script src="app.js"></script>
+<script src="engine.js"></script><script src="book-db.js"></script><script src="openings.js"></script><script src="sf-adapter.js"></script><script src="icons.js"></script><script src="app.js"></script>
 </body></html>
