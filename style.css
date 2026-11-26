@@ -68,3 +68,7 @@ details.card p{margin:8px 0 0;font-size:14px}
 .mv .ic{width:18px;height:18px}
 
 .tp{margin:8px 0;font-size:14px;color:var(--tx)}.tp b{color:var(--hi)}
+
+.skillbar{max-width:1000px;margin:0 auto 12px;padding:12px;background:var(--card);border-radius:8px}
+.skillbar .seg{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.skillbar .seg button.on{background:var(--g);color:#fff}
