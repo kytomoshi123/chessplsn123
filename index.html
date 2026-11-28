@@ -5,7 +5,7 @@
 <title>ChessPlan — анализ партии и лучший ход</title>
 <link rel="stylesheet" href="style.css"></head>
 <body>
-<header class="top"><b>♞ ChessPlan</b><div class="chips" id="lv"></div></header>
+<header class="top"><b>♞ ChessPlan</b><div class="tabs"><button id="tabPlay" class="on">Подсказки</button><button id="tabLearn">Обучение</button></div><div class="chips" id="lv"></div></header>
 <main class="wrap">
  <section class="left">
   <div id="palT" class="pal" hidden></div>
@@ -21,11 +21,12 @@
   <div id="mv" class="mv"></div>
  </section>
  <aside class="right">
-  <div class="card">
+  <div class="card lcard" id="learn"></div>
+  <div class="card pcard">
    <div class="hd"><b id="st"></b><span class="chip" id="depth"></span><span class="chip ev" id="evt"></span><span class="chip" id="eng">встроенный движок</span></div>
    <div id="lines"></div>
   </div>
-  <div class="card">
+  <div class="card pcard">
    <div id="gr" class="gr"></div>
    <div id="goal" class="goal"></div>
    <div id="hint"></div>
@@ -36,27 +37,28 @@
    <div id="tr" class="tr"></div>
    <div id="lvinfo" class="muted"></div>
   </div>
-  <div class="card">
+  <div class="card pcard">
    <div class="btns"><button id="rev">📊 Анализ всей партии</button></div>
    <div id="sum" class="muted"></div>
   </div>
-  <div class="card">
+  <div class="card pcard">
    <textarea id="inp" placeholder="Вставь FEN позиции или PGN партии"></textarea>
    <div class="btns"><button id="lf">Загрузить</button><button id="cf">Копировать FEN</button><button id="cp">Копировать PGN</button></div>
   </div>
-  <div class="card">
+  <div class="card pcard">
    <b>Импорт с chess.com</b>
    <div class="ctl"><input id="cu" placeholder="Ник на chess.com" style="flex:1;min-width:120px;padding:8px 10px;border-radius:6px;border:0;background:#3d3a37;color:#fff"><button id="cl">Загрузить</button></div>
    <div id="cg" class="muted"></div>
   </div>
-  <div class="card" id="topic"></div>
-  <div class="card" id="recap"></div>
-  <details class="card">
+  <div class="card pcard" id="topic"></div>
+  <div class="card pcard" id="recap"></div>
+  <details class="card pcard">
    <summary><b>Stockfish</b></summary>
    <p>Stockfish включён в сайт: файлы <b>stockfish-19-lite-single.js</b> и <b>.wasm</b> должны лежать рядом с index.html.</p>
    <p>Загрузи все файлы на хостинг (GitHub Pages). Если вверху написано «Stockfish», он работает; если «встроенный движок» — файлы не загрузились.</p>
+   <p id="sfstat" class="muted">Проверяю…</p><button id="sftest">Проверить Stockfish</button>
   </details>
-  <details class="card">
+  <details class="card pcard">
    <summary><b>Правила и типы шахов</b></summary>
    <p><b>Шах</b>: король под ударом. Ответить можно ходом короля, блокировкой или взятием атакующей фигуры.</p>
    <p><b>Двойной шах</b>: шах сразу двумя фигурами. Король обязан уйти, блокировать или взять нельзя.</p>
@@ -68,7 +70,7 @@
    <p><b>Превращение</b>: пешка на последней линии становится ферзём, ладьёй, слоном или конём.</p>
    <p><b>Ничья</b>: троекратное повторение, правило 50 ходов, недостаточно материала, пат, соглашение сторон.</p>
   </details>
-  <details class="card">
+  <details class="card pcard">
    <summary><b>Справочник: ловушки, гамбиты, мат-паттерны</b></summary>
    <p><b>Ловушки:</b> Детский мат, Мат дурака, Мат Легаля, Ловушка Блэкберна (Blackburne Shilling), Атака жареной печени (Fried Liver), Слоновая ловушка (Elephant), Ловушка Ласкера, Ноева ковчега, Удочка (Fishing Pole), Мортимера, Кенингера, Энглунда, Сибирская, Фаярович, Кембридж-Спрингс, Рубинштейна, Маршалла, Тарраша, Вюрцбургера, Халосара.</p>
    <p><b>Необычные первые ходы белых:</b> 1.g4 Гроб, 1.b4 Польский, 1.b3 Ларсен, 1.f4 Бёрд, 1.Na3 Натрий, 1.h4 Депре, 1.Nh3 Амар, 1.a3 Андерссен, 1.h3 Клеменц, 1.e3 Ван т Крейс, 1.d3 Мизес, 1.a4 Уэр, 1.c3 Сарагоса, 1.g3 фианкетто, 1.Nc3 Дунст.</p>
@@ -77,11 +79,11 @@
    <p><b>Мат-паттерны и приёмы:</b> удушающий мат, Анастасии, арабский, Бодена, ласточкин хвост, эполетный, крючковой, опера, Пилсбери, мельница, греческий дар, промежуточный ход, освобождающая жертва, отвлечение, заманивание, перекрытие, вскрытое нападение, двойной шах, слабое превращение.</p>
    <p><b>Системы:</b> Орангутан, Бегемот, Староиндийская атака, Каменная стена, Лондон, Колле, Торре, Тромповский, Чешская, Крысиная, Ёж.</p>
   </details>
-  <div class="card" id="legend"></div>
+  <div class="card pcard" id="legend"></div>
  </aside>
 </main>
 <section class="skillbar" id="skillbar"><b>Моя сила игры</b>
  <div class="seg" id="skill"></div><div id="skinfo" class="muted"></div></section>
 <footer class="foot">Движок упрощённый (не Stockfish). Классификация ходов — эвристика по оценке движка, не точная копия chess.com. Подсказки на низких рейтингах специально проще.</footer>
-<script defer src="core.js"></script><script defer src="engine.js"></script><script defer src="book-db.js"></script><script defer src="openings.js"></script><script defer src="sf-adapter.js"></script><script defer src="icons.js"></script><script defer src="app.js"></script>
+<script defer src="core.js"></script><script defer src="engine.js"></script><script defer src="book-db.js"></script><script defer src="openings.js"></script><script defer src="sf-adapter.js"></script><script defer src="icons.js"></script><script defer src="app.js"></script><script defer src="lessons.js"></script><script defer src="learn.js"></script>
 </body></html>

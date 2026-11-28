@@ -1,3 +1,4 @@
+const LM=new Map();
 const E=Eng,$=s=>document.querySelector(s),STD='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',ONLYK='4k3/8/8/8/8/8/8/4K3 w - - 0 1';
 const G=Object.fromEntries(Object.entries({K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟'}).map(([k,v])=>[k,v+'\uFE0E']));
 const CLS={brilliant:{n:'Блестящий',d:'!! Корректная жертва фигуры, лучший или почти лучший ход. После неё позиция не плохая, а до хода не была абсолютно выигранной'},great:{n:'Отличный',d:'! Ход, кардинально влияющий на исход: единственный, спасающий позицию, или единственный правильный ответ'},best:{n:'Лучший',d:'★ Первая линия движка — самый точный ход'},excellent:{n:'Превосходный',d:'Почти как первая линия: потеря шансов менее 2%'},good:{n:'Хороший',d:'Крепкий, логичный ход, у движка были идеи точнее'},book:{n:'Книжный',d:'Ход из дебютной теории, точность не оценивается'},inaccuracy:{n:'Неточность',d:'?! Шансы на победу падают на 5–10%'},mistake:{n:'Ошибка',d:'? Шансы падают на 10–20%, упущено преимущество или отдана инициатива'},miss:{n:'Упущение',d:'✕ Соперник только что ошибся, а ты не использовал это и вернул игру в равное или худшее русло'},blunder:{n:'Зевок',d:'?? Потеря фигуры, пропущенный мат или выигрыш превращён в проигрыш: потеря шансов 20% и больше'}};
@@ -10,14 +11,26 @@ const stdStart=()=>sf.split(' ').slice(0,4).join(' ')===STD.split(' ').slice(0,4
 const lastK=()=>{const x=mi[mi.length-1];return x?x.k:''};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const copy=t=>{try{navigator.clipboard.writeText(t).catch(()=>prompt('Скопируй:',t))}catch(e){try{prompt('Скопируй:',t)}catch(_){}}};
-async function analyzeAtA(p,hs,lvl,stale){const k=CK(p)+(SF.on?'S':'')+(lvl?'r':'');if(CACHE[k])return CACHE[k];
- const l0=lvl||L(),t=lvl?1:SK[skill].t,l={...l0,sms:Math.min(4500,Math.round(l0.sms*t)),ms:Math.min(3000,Math.round(l0.ms*t)),mpv:Math.min(8,l0.mpv+(skill===3&&!lvl?2:0)),d:l0.d+(skill>=2&&!lvl?2:0)},b=Book.move(BH(hs),l.tier,l.bk),fen=E.toFen(p,0,1);let r=null,sfl=false,d=0;
- if(SF.on){const lines=await SF.analyze(fen,{ms:l.sms,mpv:l.mpv,stale});if(lines===null||(stale&&stale()))return null;const L0=E.legal(p);
-  r=lines.map(x=>({m:L0.find(y=>E.uci(y)===x.u),s:x.s})).filter(o=>o.m);d=lines.length?lines[0].d:0;sfl=r.length>0}
- if(!r||!r.length){r=E.analyze(p,l);sfl=false}
- return CACHE[k]={r,book:b?b.mv:'',bname:b?b.name:'',sf:sfl,fen,d}}
+const PEND={},ckey=(p,lvl,fr)=>CK(p)+(SF.on?'S':'')+(lvl?'r':'')+(fr<1?'f'+fr:'');
+const peek=p=>CACHE[ckey(p,null,1)]||CACHE[ckey(p,null,.5)]||CACHE[ckey(p,null,.2)]||null;
+async function analyzeAtA(p,hs,lvl,stale,frac){frac=frac||1;const k=ckey(p,lvl,frac);if(CACHE[k])return CACHE[k];
+ if(PEND[k]){const x=await PEND[k];if(x)return x}
+ const pr=(async()=>{
+  const t0=Date.now(),l0=lvl||L(),t=lvl?1:SK[skill].t*frac,cap=lvl?4500:(l0.cap||4500),sdd=l0.sd?l0.sd+(lvl?0:skill===2?3:skill===3?6:0):0,l={...l0,sms:Math.max(100,Math.min(frac<.5&&!lvl?300:cap,Math.round(l0.sms*t))),ms:Math.max(40,Math.min(frac<.5&&!lvl?120:Math.min(cap,3000),Math.round(l0.ms*t))),mpv:Math.min(8,l0.mpv+(skill===3&&!lvl?2:0)),d:l0.d+(skill>=2&&!lvl?2:0)},b=Book.move(BH(hs),l.tier,l.bk),fen=E.toFen(p,0,1);let r=null,sfl=false,d=0;
+  if(SF.on){const lines=await SF.analyze(fen,{ms:l.sms,mpv:l.mpv,dep:sdd,stale});if(lines===null||(stale&&stale()))return null;const L0=E.legal(p);
+   r=lines.map(x=>({m:L0.find(y=>E.uci(y)===x.u),s:x.s})).filter(o=>o.m);d=lines.length?lines[0].d:0;sfl=r.length>0}
+  if(!r||!r.length){if(SF.on){SF.fallbacks++;const e=$('#sfstat');if(e)e.textContent='Внимание: Stockfish включён, но '+SF.fallbacks+' раз не вернул ходы, использован встроенный движок.'}r=E.analyze(p,l);sfl=false}
+  return CACHE[k]={r,book:b?b.mv:'',bname:b?b.name:'',sf:sfl,fen,d,frac,t:Date.now()-t0}})();
+ PEND[k]=pr;try{return await pr}finally{delete PEND[k]}}
+// Упреждающий расчёт: пока ты вводишь ходы, Stockfish заранее считает вероятные следующие позиции
+let ptk=0;const PKEYS=new Set(),ADOPT=new Set();
+function ponder(items,frac){if(!SF.on)return;const my=++ptk;PKEYS.clear();ADOPT.clear();const ks=items.map(it=>ckey(it.p,null,frac));ks.forEach(k=>PKEYS.add(k));
+ (async()=>{for(let i=0;i<items.length;i++){if(my!==ptk)return;const k=ks[i];await analyzeAtA(items[i].p,items[i].h,null,()=>my!==ptk&&!ADOPT.has(k),frac)}})().catch(()=>{})}
+// Оценка твоих и чужих ходов откладывается, пока не готова подсказка (чтобы не задерживать её)
+const GQ=[];let flushing=false;
+async function flushGrades(){if(flushing)return;flushing=true;try{while(GQ.length){const g=GQ.shift();await gradeOne(...g)}}finally{flushing=false}}
 async function classifyA(p,m,info,isMe,prevK,hs,ms){let r=info.r;const u=E.uci(m);
- if(info.sf&&!r.some(o=>E.uci(o.m)===u)&&!(hs&&Book.isBook(BH(hs),u,L().tier,L().bk))){const s=await SF.score(info.fen,u,ms||Math.min(L().sms,1200));if(s!==null)r=r.concat([{m,s}]).sort((x,y)=>y.s-x.s)}
+ if(info.sf&&!r.some(o=>E.uci(o.m)===u)&&!(hs&&Book.isBook(BH(hs),u,L().tier,L().bk))){const s=await SF.score(info.fen,u,ms||Math.min(L().sms,500));if(s!==null)r=r.concat([{m,s}]).sort((x,y)=>y.s-x.s)}
 if(!info.sf){const o=r.find(x=>E.uci(x.m)===u);if(o&&o.ub){const s=E.scoreMove(p,m,{ms:Math.max(150,L().ms*2),d:L().d+1});if(s!==null)r=r.map(x=>x===o?{...x,s,ub:false}:x).sort((x,y)=>y.s-x.s)}}
  return classify(p,m,{...info,r},isMe,prevK,hs)}
 // Классификация хода: сравнивает ход с лучшим по движку (оценка с точки зрения ходящего)
@@ -40,7 +53,7 @@ function classify(p,m,info,isMe,prevK,hs){const u=E.uci(m),r=info.r,l=L(),k=l.k,
  // Упущение: соперник ошибся, выигрыш был доступен, а ход его не использовал
  if((prevK==='blunder'||prevK==='mistake')&&epB>=0.70&&epP<0.70&&pl>=5&&kls!=='blunder')kls='miss';
  return{k:kls,loss,pl}}
-globalThis.CP={classify:(...x)=>classify(...x),EPf};
+globalThis.CP={classify:(...x)=>classify(...x),EPf,drawFilter:(...x)=>drawFilter(...x),legalMoves:()=>leg,keys:()=>keys,keyOf:s=>key(s),pos:()=>pos};
 function arrow(u,col,w,op){if(!u||u.length<4)return'';const p=i=>[(flip?7-(i&7):i&7)*10+5,(flip?7-(i>>3):i>>3)*10+5];
  const[x1,y1]=p(idx(u.slice(0,2))),[x2,y2]=p(idx(u.slice(2,4))),dx=Math.abs(x2-x1)/10,dy=Math.abs(y2-y1)/10,hl=Math.min(w*1.9,6.5),hw=Math.min(w*1.15,3.6);
  const head=(ax,ay,bx,by)=>{const n=Math.hypot(bx-ax,by-ay)||1,ux=(bx-ax)/n,uy=(by-ay)/n,ex=bx-ux*hl,ey=by-uy*hl;return`<polygon points="${bx},${by} ${ex-uy*hw},${ey+ux*hw} ${ex+uy*hw},${ey-ux*hw}" fill="${col}" opacity="${op}"/>`};
@@ -53,9 +66,10 @@ function arrows(r,bu,l){const k=l.k,top=r[0],sec=r[1],gap=sec&&!sec.ub?EPf(top.s
  for(const o of r.slice(1,3)){const u=E.uci(o.m);if(u!==bu&&!o.ub&&top.s-o.s<=80)s+=arrow(u,'#86efac',1.5,.35)}
  return s+arrow(bu,'#22c55e',w,.92)}
 const SQ=[];
-function initBoard(){const bd=$('#board');bd.innerHTML='';SQ.length=0;for(let d=0;d<64;d++){const e=document.createElement('div'),s=document.createElement('span'),im=document.createElement('img');s.className='pc';im.className='ic badge';im.hidden=true;e.append(s);e.append(im);bd.append(e);SQ.push({e,s,im,cls:'',ch:'',bk:''})}}
+function initBoard(){const bd=$('#board');bd.innerHTML='';SQ.length=0;for(let d=0;d<64;d++){const e=document.createElement('div'),s=document.createElement('span'),im=document.createElement('img');s.className='pc';im.className='ic badge';im.hidden=true;const cr=document.createElement('span'),cf=document.createElement('span');cr.className='co cr';cf.className='co cf';e.append(s);e.append(im);e.append(cr);e.append(cf);bd.append(e);SQ.push({e,s,im,cr,cf,rt:'',ft:'',cls:'',ch:'',bk:''})}}
 function draw(){if(!SQ.length)initBoard();const lu=hist.length?hist[hist.length-1]:'',lf=lu?idx(lu.slice(0,2)):-1,lt=lu?idx(lu.slice(2,4)):-1,lk=mi.length?mi[mi.length-1]:null,hasI=typeof ICONS!=='undefined';
- for(let d=0;d<64;d++){const i=flip?63-d:d,c=pos.b[i],q=SQ[d],cl='sq '+(((i&7)+(i>>3))&1?'d':'l')+(sel===i?' sel':'')+((i===lf||i===lt)?' last':'')+(sel!==null&&leg.some(m=>m.f===sel&&m.t===i)?' tg':'');
+ for(let d=0;d<64;d++){const i=flip?63-d:d,c=pos.b[i],q=SQ[d],cl='sq '+(((i&7)+(i>>3))&1?'d':'l')+(sel===i?' sel':'')+((i===lf||i===lt)?' last':'')+(sel!==null&&leg.some(m=>m.f===sel&&m.t===i)?' tg':'')+(LM.has(i)?' '+LM.get(i):'');
+  const rt=(d&7)===0?String(8-(i>>3)):'',ft=(d>>3)===7?'abcdefgh'[i&7]:'';if(q.rt!==rt){q.cr.textContent=rt;q.rt=rt}if(q.ft!==ft){q.cf.textContent=ft;q.ft=ft}
   if(q.cls!==cl){q.e.className=cl;q.cls=cl}q.e.dataset.i=i;
   const pcl=c?'pc '+(c===c.toUpperCase()?'w':'b'):'pc',ch=(c?G[c.toUpperCase()]:'')+pcl;if(q.ch!==ch){q.s.textContent=c?G[c.toUpperCase()]:'';q.s.className=pcl;q.ch=ch}
   const bk=(hasI&&i===lt&&lk&&lk.k&&ICONS[lk.k])?lk.k:'';if(q.bk!==bk){if(bk){q.im.src=ICONS[bk];q.im.alt=CLS[bk].n;q.im.hidden=false}else q.im.hidden=true;q.bk=bk}}}
@@ -96,7 +110,7 @@ function topics(){const el=$('#topic');if(edit||typeof TOPICS==='undefined'){el.
 function renderMoves(){$('#mv').innerHTML=sans.map((s,i)=>(i%2?'':`<span class="num">${(i>>1)+1}.</span>`)+`<span class="mo">${s}${mi[i]?ic(mi[i].k):''}</span>`).join(' ')}
 function counter(p,m){const n=E.apply(p,m),rr=E.analyze(n,{d:4,ms:70,margin:100,q:1});if(!rr.length)return{n:0};const top=rr[0].s;return{n:rr.filter(o=>!o.ub&&top-o.s<=60).length}}
 // На любом рейтинге цель — победа: подсказка никогда не уходит далеко от лучшего хода (слабая ≤50 cp, нормальная ≤30 cp), а выигрыш не отдаётся.
-function chooseMine(r,l,info){
+function chooseCore(r,l,info){
  if(info.book)return{u:info.book,label:'Книжный ход'};
  const losing=r[0].s<=-150;
  if(skill===3){const tol=l.tier>=3?10:25,cand=r.filter(o=>!o.ub&&r[0].s-o.s<=tol).slice(0,4);let best=cand[0]||r[0],bs=-1e9,bn=0;
@@ -106,33 +120,57 @@ function chooseMine(r,l,info){
  if(losing){const pk=practical(r,80);return{u:E.uci(pk.m),label:pk===r[0]?'Лучший ход':'Ловушка: шанс на победу',extra:'Позиция сложная: ищем ход, после которого соперник легче ошибётся.'}}
  if(skill===0){const pk=E.pick(r,{...l,tol:50},{hint:1});return{u:E.uci(pk.m),label:'Ход на уровне рейтинга'}}
  const pk=l.tier>1?r[0]:practical(r,30);return{u:E.uci(pk.m),label:pk===r[0]?'Лучший ход':'Практичный ход (соперник может ошибиться)'}}
-async function think(t){if(t!==tk)return;if(over()){$('#hint').textContent='';return}
- const l=L(),info=await analyzeAtA(pos,hist,null,()=>t!==tk);if(t!==tk||!info)return;const r=info.r;if(!r.length)return;
+function show(info,t){if(t!==tk)return;const l=L(),r=info.r;if(!r.length)return;
  const top=r[0],mine=pos.t===me,bestUci=info.book||E.uci(top.m),ws=pos.t==='w'?1:-1,ev=ws*top.s;
- setEval(ev);$('#depth').textContent=info.sf?'глубина '+(info.d||'?'):'глубина '+l.d+'/'+l.d;const rel=(me==='w'?1:-1)*ev;$('#goal').textContent='🎯 Цель — победа. '+(rel>20000?'Мат близко, играй его!':rel>=150?'Ты выигрываешь: упрощай, меняй фигуры, не рискуй.':rel>=50?'Небольшое преимущество: усиливай позицию и создавай угрозы.':rel>-50?'Равно: развивай фигуры и жди ошибки соперника.':rel>-150?'Чуть хуже: защищайся точно и ищи ловушки.':'Позиция сложная: ставь ловушки и ищи контрудар.');$('#evt').textContent=fmt(ev);
+ setEval(ev);$('#depth').textContent=(info.sf?'Stockfish · глубина '+(info.d||'?'):'Встроенный · глубина '+l.d)+(info.t!=null?' · '+(info.t/1000).toFixed(1)+' с':'')+(info.frac<1?' · быстро':'');const rel=(me==='w'?1:-1)*ev;$('#goal').textContent='🎯 Цель — победа. '+(rel>20000?'Мат близко, играй его!':rel>=150?'Ты выигрываешь: упрощай, меняй фигуры, не рискуй.':rel>=50?'Небольшое преимущество: усиливай позицию и создавай угрозы.':rel>-50?'Равно: развивай фигуры и жди ошибки соперника.':rel>-150?'Чуть хуже: защищайся точно и ищи ловушки.':'Позиция сложная: ставь ловушки и ищи контрудар.');$('#evt').textContent=fmt(ev);
  $('#lines').innerHTML=r.slice(0,4).map(o=>`<div class="ln" data-u="${E.uci(o.m)}"><span class="evc">${fmt(ws*o.s)}</span><span>${E.san(pos,o.m,leg)}</span></div>`).join('');
  const nm=u=>{const m=leg.find(x=>E.uci(x)===u);return m?E.san(pos,m,leg):u};
  $('#arrow').innerHTML='';$('#pl').hidden=true;
- if(mine){const ch=chooseMine(r,l,info),bu=ch.u,bm=leg.find(x=>E.uci(x)===bu),thr=bm?mateThreat(E.apply(pos,bm)):'';
+ if(mine){const ch=chooseMine(r,l,info),bu=ch.u,bm=leg.find(x=>E.uci(x)===bu),thr=bm?mateThreat(E.apply(pos,bm)):'';if(ch.need&&SF.on&&!info.more){info.more=true;moreLines(info,t)}
   $('#hint').innerHTML=`${ch.label}: <b>${nm(bu)}</b>${info.book?' · 📖 теория':''}${ch.extra?`<br><span class="muted">${ch.extra}</span>`:''}${thr?`<br><span class="warn">⚠ Угроза: после этого хода соперник ставит мат ${thr}</span>`:''}`;
   if(hint)$('#arrow').innerHTML=arrows(r,bu,l);BM=bu;$('#pl').hidden=false}
  else{const pr=E.uci(E.pick(r,l,{ply:hist.length}).m);$('#hint').innerHTML=`Вероятный ход соперника: <b>${nm(pr)}</b>`;
   if(hint)$('#arrow').innerHTML=arrow(pr,'#ef4444',1.6,.75)}
  $('#alt').textContent='Другие варианты: '+r.slice(1,3).map(o=>E.san(pos,o.m,leg)+' ('+fmt(ws*o.s)+')').join(', ')}
+
+function finish(t,mine,info){if(t!==tk)return;flushGrades();if(!SF.on)return;const r=info.r;
+ if(mine){const m=leg.find(x=>E.uci(x)===BM);if(m)ponder([{p:E.apply(pos,m),h:hist.concat(BM)}],.5)}
+ else ponder(r.filter(o=>!o.ub).slice(0,2).map(o=>({p:E.apply(pos,o.m),h:hist.concat(E.uci(o.m))})),1)}
+// Защита от ничьей: когда позиция лучше или равна, не повторяем позицию в третий раз, не ставим пат и не доводим до правила 50 ходов
+const countKeys=()=>{const c={};for(const k of keys)c[k]=(c[k]||0)+1;return c};
+function drawFilter(r){const none={r,note:'',need:false};if(r.length<2||pos.t!==me||edit)return none;const top=r[0].s;if(top<=-150)return none;   // проигрываем: ничья — хороший исход
+ const kc=countKeys(),W=top>=150?Math.min(150,top-100):40;
+ const rows=r.map(o=>{const q=E.apply(pos,o.m),c=kc[key(q)]||0,cap=!!pos.b[o.m.t]||pos.b[o.m.f].toLowerCase()==='p';
+  return{o,c,stale:!E.legal(q).length&&!E.inCheck(q),insuff:E.insuff(q),fifty:(cap?0:hm+1)>=100,prog:cap}});
+ const bad=x=>x.c>=2||x.stale||(x.insuff&&top>100)||x.fifty;
+ if(!rows.some(x=>bad(x)||x.c>=1))return none;
+ let ok=rows.filter(x=>!bad(x)&&!x.o.ub&&top-x.o.s<=W);const fresh=ok.filter(x=>x.c===0);if(fresh.length)ok=fresh;
+ if(hm>=40){const pr=ok.filter(x=>x.prog);if(pr.length)ok=pr}
+ const f0=rows[0],why=f0.stale?'пат':f0.c>=2?'повтор позиции в третий раз':f0.fifty?'правило 50 ходов':f0.insuff?'недостаток материала':f0.c===1?'повтор позиции':'';
+ if(!ok.length){const alt=rows.filter(x=>!bad(x)).sort((x,y)=>y.o.s-x.o.s);return{r:(alt.length?alt:rows).map(x=>x.o),note:'⚠ Сильные ходы ведут к ничьей ('+(why||'повтор')+'), выбран лучший из остальных.',need:true}}
+ return{r:ok.map(x=>x.o),note:ok[0].o!==r[0]&&why?'Избегаю ничьей ('+why+').':'',need:false}}
+function chooseMine(r0,l,info){if(info.book)return chooseCore(r0,l,info);const F=drawFilter(r0),res=chooseCore(F.r,l,info);if(F.note)res.extra=(res.extra?res.extra+' ':'')+F.note;res.need=F.need;return res}
+async function moreLines(info,t){try{const lines=await SF.analyze(info.fen,{ms:350,mpv:14,stale:()=>t!==tk});if(!lines||!lines.length||t!==tk)return;const L0=E.legal(pos),r=lines.map(x=>({m:L0.find(y=>E.uci(y)===x.u),s:x.s})).filter(o=>o.m);if(r.length>info.r.length){info.r=r;show(info,t)}}catch(e){}}
+async function think(t){if(t!==tk)return;if(over()){$('#hint').textContent='';return}
+ const mine=pos.t===me,stale=()=>t!==tk,fr=mine?1:.5;let info=peek(pos);
+ if(info&&info.frac>=fr){show(info,t);finish(t,mine,info);return}
+ if(info)show(info,t);
+ else if(Math.min(L().cap,L().sms*SK[skill].t)>250){const q=await analyzeAtA(pos,hist,null,stale,.2);if(stale()||!q)return;show(q,t)}
+ const full=await analyzeAtA(pos,hist,null,stale,fr);if(stale()||!full)return;show(full,t);finish(t,mine,full)}
 const PIECES=['K','Q','R','B','N','P'];
 function renderPal(){const mk=(col)=>PIECES.map(x=>{const ch=col==='w'?x:x.toLowerCase();return`<button data-p="${ch}" class="${pick===ch?'on':''}"${col==='w'?' data-w=1':''}>${G[x]}</button>`}).join('')+`<button data-p="" class="${pick===''?'on':''}">✕</button>`+`<button data-p="stm">ход: ${pos.t==='w'?'белых':'чёрных'}</button>`;
  $('#palT').innerHTML=mk('b');$('#palB').innerHTML=mk('w')}
-function go(){const t=++tk;if(SF.stopStale)SF.stopStale();
+function go(){const t=++tk;if(PKEYS.has(ckey(pos,null,1))||PKEYS.has(ckey(pos,null,.5))){ADOPT.add(ckey(pos,null,1));ADOPT.add(ckey(pos,null,.5))}ptk++;if(SF.stopStale)SF.stopStale();
  if(edit){draw();$('#arrow').innerHTML='';$('#pl').hidden=true;$('#hint').textContent='Редактор: выбери фигуру сверху или снизу и ставь на доску (✕ — стереть)';$('#st').textContent='Режим редактора';$('#st').className='edit';renderPal();return}
- $('#st').className='';draw();$('#arrow').innerHTML='';$('#pl').hidden=true;$('#hint').textContent='';$('#alt').textContent='';$('#lines').innerHTML='';status();renderMoves();save();
+ $('#st').className='';draw();$('#arrow').innerHTML='';if(typeof Learn!=='undefined'&&Learn.active){if(Learn.afterGo)Learn.afterGo();return}$('#pl').hidden=true;$('#hint').textContent='';$('#alt').textContent='';$('#lines').innerHTML='';status();renderMoves();save();
  if(over()){if(!autoRev&&hist.length){autoRev=true;review().then(recap)}return}$('#hint').textContent='Считаю…';setTimeout(()=>think(t).catch(()=>{$('#hint').textContent='Ошибка расчёта, попробуй ещё раз'}),20)}
 function push(m,quiet){const p=pos,isMe=p.t===me,u=E.uci(m),hs=hist.slice(),pk=lastK();
  mi.push(null);sans.push(E.san(p,m,leg));stack.push([p,hm]);hist.push(u);
  hm=(p.b[m.f].toLowerCase()==='p'||p.b[m.t])?0:hm+1;pos=E.apply(p,m);keys.push(key(pos));leg=E.legal(pos);
  if(!quiet)gradeLater(p,m,isMe,pk,hs,mi.length-1,u)}
-async function gradeLater(p,m,isMe,pk,hs,ix,u){try{const info=await analyzeAtA(p,hs);if(!info)return;const c=await classifyA(p,m,info,isMe,pk,hs);
- if(hist[ix]!==u)return;mi[ix]=c;if(ix===hist.length-1)msg=(isMe?'Ты: ':'Соперник: ')+sans[ix]+' — '+CLS[c.k].n+(c.pl>0?' (−'+c.pl.toFixed(1)+'%)':'');renderMoves();if(!edit)draw();status()}catch(e){}}
-function play(m){sel=null;push(m);go()}
+function gradeLater(...g){GQ.push(g);setTimeout(flushGrades,5000)}
+async function gradeOne(p,m,isMe,pk,hs,ix,u){try{const info=peek(p)||await analyzeAtA(p,hs,null,null,.5);if(!info)return;const c=await classifyA(p,m,info,isMe,pk,hs);
+ if(hist[ix]!==u)return;mi[ix]=c;if(ix===hist.length-1)msg=(isMe?'Ты: ':'Соперник: ')+sans[ix]+' — '+CLS[c.k].n+(c.pl>0?' (−'+c.pl.toFixed(1)+'%)':'');renderMoves();if(!edit)draw();status()}catch(e){}}function play(m){if(typeof Learn!=='undefined'&&Learn.active){sel=null;Learn.onUser(m);return}sel=null;push(m);go()}
 function reset(fen){let p;try{p=E.fromFen(fen||STD)}catch(e){alert('Не удалось прочитать позицию (FEN)');return false}
  pos=p;sf=fen||STD;stack=[];hist=[];sans=[];mi=[];keys=[key(pos)];autoRev=false;lastRev=null;$('#recap').innerHTML='';hm=+((fen||'').split(' ')[4])||0;leg=E.legal(pos);sel=null;msg='';go();return true}
 function loadPgn(t){const fm=t.match(/\[FEN "([^"]+)"\]/),start=fm?fm[1]:STD;
@@ -180,6 +218,7 @@ function recap(){const R=lastRev;if(!R||!R.out.length)return;
  $('#recap').innerHTML=`<b>Разбор партии</b><div class="muted">${over()||'Партия не завершена'}</div>`+(items.length?items.map(x=>`<div class="rc">${ic(x.c.k)}<b>${num(x.i)}${R.sans[x.i]}</b> — ${CLS[x.c.k].n}, потеря ${x.c.pl.toFixed(1)}%${x.c.bs&&x.c.bs!==R.sans[x.i]?`<div class="muted">Лучше было: ${x.c.bs}</div>`:''}</div>`).join(''):'<div class="muted">Серьёзных ошибок не найдено</div>')}
 // --- обработчики ---
 $('#board').onclick=e=>{const s=e.target.closest('.sq');if(!s)return;const i=+s.dataset.i;
+ if(typeof Learn!=='undefined'&&Learn.active&&Learn.onSquare&&Learn.onSquare(i))return;
  if(edit){if(pick!==null){pos.b[i]=pick;pos.e=-1;const b=pos.b;pos.c=(b[60]==='K'&&b[63]==='R'?'K':'')+(b[60]==='K'&&b[56]==='R'?'Q':'')+(b[4]==='k'&&b[7]==='r'?'k':'')+(b[4]==='k'&&b[0]==='r'?'q':'');draw()}return}
  if(over())return;const c=leg.filter(x=>x.f===sel&&x.t===i);
  if(c.length>1){promo(c);return}if(c.length){play(c[0]);return}
@@ -223,4 +262,7 @@ async function importChess(){const u=($('#cu').value||'').trim().toLowerCase().r
 $('#cl').onclick=()=>importChess();
 $('#cg').onclick=e=>{const d=e.target.closest('.ln');if(!d||!window._cgames)return;const g=window._cgames[+d.dataset.g];if(g){loadPgn(g.pgn);$('#cg').insertAdjacentHTML('afterbegin','<div class="muted">Открыта партия, разбор будет после окончания.</div>')}};
 chips();legend();if(!restore())reset();skillUI();
-SF.init().then(f=>{if(f){$('#eng').textContent='Stockfish';CACHE={};if(!edit)go()}else $('#eng').textContent='встроенный движок'});
+const engChip=()=>{const e=$('#eng');e.textContent=SF.on?(SF.native?'Stockfish (нативный)':'Stockfish'):'Встроенный движок';e.title=SF.status.msg;const s=$('#sfstat');if(s)s.textContent=SF.status.msg};
+engChip();
+SF.init().then(f=>{engChip();if(f){CACHE={};if(!edit)go()}});
+$('#sftest').onclick=async()=>{const s=$('#sfstat');s.textContent='Проверяю…';const r=await SF.test();s.textContent=r.ok?'✅ '+r.name+' отвечает: глубина '+r.depth+' за '+r.ms+' мс'+(r.nps?', около '+Math.round(r.nps/1000)+' тыс. позиций/с':'')+', лучший ход из начальной позиции '+r.best:'❌ '+r.msg}
